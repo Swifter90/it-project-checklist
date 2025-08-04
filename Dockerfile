@@ -12,19 +12,13 @@ RUN apt-get update && apt-get install -y \
 # Установка рабочей директории
 WORKDIR /app
 
-# Создание виртуального окружения
-RUN python -m venv /app/venv
-
-# Активируем виртуальную среду
-ENV PATH="/app/venv/bin:$PATH"
-
 # Установка переменной окружения для WeasyPrint
 ENV LD_LIBRARY_PATH=/usr/lib
 
 # Очистка кэша pip
 RUN pip cache purge
 
-# Явная установка Gunicorn
+# Установка Gunicorn глобально
 RUN pip install gunicorn==23.0.0
 
 # Проверка установки Gunicorn
@@ -34,14 +28,14 @@ RUN which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found"; 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Повторная проверка Gunicorn и отладка
-RUN ls -la /app/venv/bin/ && /app/venv/bin/pip list && which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found after requirements.txt"; exit 1; }
+# Повторная проверка Gunicorn
+RUN ls -la /usr/local/bin/ && pip list && which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found after requirements.txt"; exit 1; }
 
-# Проверка существования gunicorn перед копированием файлов
-RUN test -f /app/venv/bin/gunicorn || { echo "ERROR: /app/venv/bin/gunicorn does not exist"; exit 1; }
+# Проверка существования gunicorn
+RUN test -f /usr/local/bin/gunicorn || { echo "ERROR: /usr/local/bin/gunicorn does not exist"; exit 1; }
 
 # Даем права на выполнение Gunicorn
-RUN chmod +x /app/venv/bin/gunicorn
+RUN chmod +x /usr/local/bin/gunicorn
 
 # Проверка WeasyPrint
 RUN weasyprint --version || { echo "ERROR: WeasyPrint not found"; exit 1; }
@@ -49,19 +43,19 @@ RUN weasyprint --version || { echo "ERROR: WeasyPrint not found"; exit 1; }
 # Копирование остальных файлов
 COPY . .
 
-# Проверка gunicorn после копирования файлов
-RUN test -f /app/venv/bin/gunicorn || { echo "ERROR: /app/venv/bin/gunicorn missing after COPY"; exit 1; }
-RUN ls -la /app/venv/bin/
+# Проверка gunicorn после копирования
+RUN test -f /usr/local/bin/gunicorn || { echo "ERROR: /usr/local/bin/gunicorn missing after COPY"; exit 1; }
+RUN ls -la /usr/local/bin/
 
-# Создание стартового скрипта для Gunicorn
+# Создание стартового скрипта
 RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'echo "Checking gunicorn availability:"' >> /app/start.sh && \
-    echo 'ls -la /app/venv/bin/gunicorn' >> /app/start.sh && \
-    echo 'if [ ! -f /app/venv/bin/gunicorn ]; then' >> /app/start.sh && \
-    echo '  echo "ERROR: /app/venv/bin/gunicorn not found at runtime"' >> /app/start.sh && \
+    echo 'ls -la /usr/local/bin/gunicorn' >> /app/start.sh && \
+    echo 'if [ ! -f /usr/local/bin/gunicorn ]; then' >> /app/start.sh && \
+    echo '  echo "ERROR: /usr/local/bin/gunicorn not found at runtime"' >> /app/start.sh && \
     echo '  exit 1' >> /app/start.sh && \
     echo 'fi' >> /app/start.sh && \
-    echo 'exec /app/venv/bin/gunicorn --bind 0.0.0.0:$PORT --timeout 120 app:app' >> /app/start.sh && \
+    echo 'exec /usr/local/bin/gunicorn --bind 0.0.0.0:$PORT --timeout 120 app:app' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Указание порта
