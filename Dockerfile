@@ -25,5 +25,5 @@ COPY . .
 # Указание порта
 EXPOSE 10000
 
-# Команда запуска Gunicorn с оптимизированными параметрами
-CMD ["gunicorn", "--workers", "2", "--timeout", "120", "--bind", "0.0.0.0:${PORT:-10000}", "app:app"]
+# Команда запуска Gunicorn в shell-форме для обработки переменной PORT
+CMD gunicorn --workers 2 --timeout 120 --bind 0.0.0.0:${PORT:-10000} app:app
