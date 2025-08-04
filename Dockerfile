@@ -19,7 +19,7 @@ ENV PATH="/app/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 # Проверка установки Gunicorn
-RUN which gunicorn || echo "Gunicorn not found after pip install"
+RUN which gunicorn && gunicorn --version || echo "ERROR: Gunicorn not found"
 
 # Копирование остальных файлов
 COPY . .
@@ -27,5 +27,5 @@ COPY . .
 # Указание порта
 EXPOSE 10000
 
-# Команда запуска Gunicorn с явной активацией виртуального окружения
-CMD ["/app/venv/bin/gunicorn", "--workers", "2", "--timeout", "120", "--bind", "0.0.0.0:10000", "app:app"]
+# Команда запуска Gunicorn
+CMD ["/app/venv/bin/gunicorn", "--workers=2", "--timeout=120", "--bind=0.0.0.0:${PORT:-10000}", "app:app"]
