@@ -15,11 +15,19 @@ WORKDIR /app
 RUN python -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# Копирование и установка зависимостей
+# Очистка кэша pip
+RUN pip cache purge
+
+# Явная установка Gunicorn
+RUN pip install gunicorn==23.0.0
+# Проверка установки Gunicorn
+RUN which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found"; exit 1; }
+
+# Копирование и установка остальных зависимостей
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-# Проверка установки Gunicorn
-RUN which gunicorn && gunicorn --version || echo "ERROR: Gunicorn not found"
+# Повторная проверка Gunicorn
+RUN which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found after requirements.txt"; exit 1; }
 
 # Копирование остальных файлов
 COPY . .
