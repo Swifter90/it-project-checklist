@@ -5,12 +5,15 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libharfbuzz0b \
-    libpangoft2-1.0-0 \
     libfontconfig1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Установка рабочей директории
 WORKDIR /app
+
+# Создание виртуального окружения
+RUN python -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
 
 # Копирование и установка зависимостей
 COPY requirements.txt .
@@ -22,5 +25,5 @@ COPY . .
 # Указание порта
 EXPOSE 10000
 
-# Команда запуска с правильной обработкой переменной PORT
+# Команда запуска Gunicorn с оптимизированными параметрами
 CMD ["gunicorn", "--workers", "2", "--timeout", "120", "--bind", "0.0.0.0:${PORT:-10000}", "app:app"]
