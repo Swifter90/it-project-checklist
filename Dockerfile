@@ -36,4 +36,4 @@ COPY . .
 EXPOSE 10000
 
 # Команда запуска Gunicorn
-CMD ["/app/venv/bin/gunicorn", "--workers=2", "--timeout=120", "--bind=0.0.0.0:${PORT:-10000}", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
