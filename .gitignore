@@ -1,5 +1,9 @@
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+static/gantt_*.png
 gantt_presentation.pdf
-static/gantt.png
