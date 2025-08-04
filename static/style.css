@@ -1,14 +1,13 @@
 body {
-    background: #f4f4f4;
+    font-family: Arial, sans-serif;
 }
-.card {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+.table th, .table td {
+    vertical-align: middle;
 }
 .btn-primary {
-    background-color: #005566;
-    border-color: #005566;
+    background-color: #007bff;
+    border-color: #007bff;
 }
-.btn-primary:hover {
-    background-color: #003d4a;
-    border-color: #003d4a;
+.alert {
+    margin-bottom: 20px;
 }
