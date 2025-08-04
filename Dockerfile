@@ -53,8 +53,19 @@ COPY . .
 RUN test -f /app/venv/bin/gunicorn || { echo "ERROR: /app/venv/bin/gunicorn missing after COPY"; exit 1; }
 RUN ls -la /app/venv/bin/
 
+# Создание стартового скрипта для Gunicorn
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "Checking gunicorn availability:"' >> /app/start.sh && \
+    echo 'ls -la /app/venv/bin/gunicorn' >> /app/start.sh && \
+    echo 'if [ ! -f /app/venv/bin/gunicorn ]; then' >> /app/start.sh && \
+    echo '  echo "ERROR: /app/venv/bin/gunicorn not found at runtime"' >> /app/start.sh && \
+    echo '  exit 1' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    echo 'exec /app/venv/bin/gunicorn --bind 0.0.0.0:$PORT --timeout 120 app:app' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 # Указание порта
 EXPOSE $PORT
 
-# Команда запуска Gunicorn с таймаутом
-CMD ["/app/venv/bin/gunicorn", "--bind", "0.0.0.0:$PORT", "--timeout", "120", "app:app"]
+# Запуск через стартовый скрипт
+CMD ["/app/start.sh"]
