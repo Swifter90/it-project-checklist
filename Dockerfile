@@ -23,4 +23,4 @@ COPY . .
 EXPOSE 10000
 
 # Команда запуска с правильной обработкой переменной PORT
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
+CMD ["gunicorn", "--workers", "2", "--timeout", "120", "--bind", "0.0.0.0:${PORT:-10000}", "app:app"]
