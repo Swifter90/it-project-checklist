@@ -31,17 +31,20 @@ RUN which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found"; 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Повторная проверка Gunicorn
-RUN which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found after requirements.txt"; exit 1; }
+# Повторная проверка Gunicorn и отладка
+RUN ls -la /app/venv/bin/ && /app/venv/bin/pip list && which gunicorn && gunicorn --version || { echo "ERROR: Gunicorn not found after requirements.txt"; exit 1; }
 
 # Даем права на выполнение Gunicorn
 RUN chmod +x /app/venv/bin/gunicorn
 
+# Проверка WeasyPrint
+RUN weasyprint --version || { echo "ERROR: WeasyPrint not found"; exit 1; }
+
 # Копирование остальных файлов
 COPY . .
 
-# Указание порта (для Render порт задается через переменную $PORT, а не фиксированный 10000)
+# Указание порта
 EXPOSE $PORT
 
-# Команда запуска Gunicorn с полным путем
-CMD ["/app/venv/bin/gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
+# Команда запуска Gunicorn в shell-формате для надежности
+CMD /app/venv/bin/gunicorn --bind 0.0.0.0:$PORT app:app
