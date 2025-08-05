@@ -3,174 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Диаграмма Ганта</title>
+    <title>Диаграмма Ганта: Запуск IT-проекта</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'ozon-blue': '#005BFF',
-                        'ozon-orange': '#FF5C00',
-                        'ozon-gray': '#F5F6F5',
-                        'ozon-white': '#FFFFFF',
-                    }
-                }
-            }
-        }
-    </script>
-    <script>
-        function toggleEndDate(checkbox, prefix) {
-            const endDateInput = document.getElementById(`${prefix}_end_date`);
-            endDateInput.disabled = checkbox.checked;
-            if (checkbox.checked) {
-                endDateInput.value = document.getElementById(`${prefix}_start_date`).value;
-            }
-        }
-
-        function validateDates(prefix) {
-            const startDate = document.getElementById(`${prefix}_start_date`).value;
-            const endDate = document.getElementById(`${prefix}_end_date`).value;
-            const isMilestone = document.getElementById(`${prefix}_is_milestone`).checked;
-            if (startDate && endDate && !isMilestone) {
-                if (new Date(endDate) < new Date(startDate)) {
-                    alert("Дата окончания не может быть раньше даты начала!");
-                    document.getElementById(`${prefix}_end_date`).value = '';
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        function confirmDelete(taskName) {
-            return confirm(`Вы уверены, что хотите удалить задачу "${taskName}"?`);
-        }
-
-        function openAddModal() {
-            document.getElementById('add_task_name').value = '';
-            document.getElementById('add_phase').value = '';
-            document.getElementById('add_team').value = '';
-            document.getElementById('add_start_date').value = '';
-            document.getElementById('add_end_date').value = '';
-            document.getElementById('add_is_milestone').checked = false;
-            document.getElementById('add_end_date').disabled = false;
-            document.getElementById('addModal').classList.remove('hidden');
-        }
-
-        function closeAddModal() {
-            document.getElementById('addModal').classList.add('hidden');
-        }
-    </script>
 </head>
-<body class="bg-ozon-gray font-sans">
+<body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-ozon-blue">Диаграмма Ганта: {{ project_name }}</h1>
-            <form method="POST" class="flex gap-2">
-                <input type="text" name="project_name" value="{{ project_name }}"
-                       class="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                <button type="submit" name="action" value="update_project_name"
-                        class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                    Изменить
-                </button>
-            </form>
-        </div>
-
+        <h1 class="text-3xl font-bold text-center mb-6">Диаграмма Ганта: Запуск IT-проекта</h1>
+        
         {% if error %}
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 animate-pulse">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             {{ error }}
         </div>
         {% endif %}
 
-        <div class="bg-ozon-white shadow-md rounded-lg p-6 mb-6">
-            <button type="button" onclick="openAddModal()"
-                    class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                Создать задачу
-            </button>
-        </div>
-
-        {% if checklist %}
-        <div class="bg-ozon-white shadow-md rounded-lg p-6 mb-6">
-            <h2 class="text-lg font-semibold text-ozon-blue mb-4">Список задач</h2>
+        <form method="POST" class="bg-white shadow-md rounded-lg p-6 mb-6">
             <div class="grid grid-cols-1 gap-4">
                 {% for item in checklist %}
-                <div class="flex justify-between items-center border-b pb-4">
-                    <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }}) {% if item.is_milestone %}[Веха]{% endif %}</p>
-                    <div class="flex gap-2">
-                        <form method="POST" onsubmit="return confirmDelete('{{ item.task | escape }}')">
-                            <input type="hidden" name="task_index" value="{{ loop.index0 }}">
-                            <button type="submit" name="action" value="delete_task"
-                                    class="bg-red-600 text-ozon-white px-3 py-1 rounded hover:bg-red-800 transition">
-                                Удалить
-                            </button>
-                        </form>
+                <div class="border-b pb-4">
+                    <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }})</p>
+                    <div class="mt-2 flex flex-col sm:flex-row sm:gap-4">
+                        <div>
+                            <label class="block text-sm">Дата начала:</label>
+                            <input type="date" name="start_{{ item.task }}"
+                                   class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm">Дата окончания:</label>
+                            <input type="date" name="end_{{ item.task }}"
+                                   class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
-
-        <form method="POST" class="flex gap-4 mb-6">
-            <button type="submit" name="action" value="build_gantt"
-                    class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition {% if not checklist %} opacity-50 cursor-not-allowed {% endif %}"
-                    {% if not checklist %} disabled {% endif %}>
-                Построить диаграмму
-            </button>
-            {% if pdf_available %}
-            <a href="/download_pdf" class="bg-ozon-orange text-ozon-white px-4 py-2 rounded hover:bg-orange-700 transition">
-                Скачать PDF
-            </a>
-            {% endif %}
+            <div class="mt-6 flex gap-4">
+                <button type="submit"
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                    Построить диаграмму
+                </button>
+                {% if pdf_available %}
+                <a href="/download_pdf?{% for item in checklist %}start_{{ item.task }}={{ request.form.get('start_' + item.task) }}&end_{{ item.task }}={{ request.form.get('end_' + item.task) }}&{% endfor %}"
+                   class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                    Скачать PDF
+                </a>
+                {% endif %}
+            </div>
         </form>
 
         {% if graph %}
-        <div class="bg-ozon-white shadow-md rounded-lg p-6">
+        <div class="bg-white shadow-md rounded-lg p-6">
             {{ graph | safe }}
         </div>
         {% endif %}
-
-        <!-- Модальное окно для добавления задачи -->
-        <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-            <div class="bg-ozon-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h2 class="text-lg font-semibold text-ozon-blue mb-4">Создать задачу</h2>
-                <form method="POST" onsubmit="return validateDates('add')">
-                    <div class="flex flex-col gap-4">
-                        <input type="text" name="task_name" id="add_task_name" placeholder="Название задачи"
-                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <input type="text" name="phase" id="add_phase" placeholder="Фаза (опционально)"
-                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <input type="text" name="team" id="add_team" placeholder="Команда (опционально)"
-                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <select name="dependencies" multiple
-                                class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                            {% for item in checklist %}
-                            <option value="{{ item.task }}">{{ item.task }}</option>
-                            {% endfor %}
-                        </select>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="is_milestone" id="add_is_milestone" onchange="toggleEndDate(this, 'add')"
-                                   class="mr-2">
-                            <span class="text-sm text-ozon-blue">Веха (без длительности)</span>
-                        </label>
-                        <input type="date" name="start_date" id="add_start_date"
-                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <input type="date" name="end_date" id="add_end_date"
-                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <div class="flex gap-4">
-                            <button type="submit" name="action" value="add_task"
-                                    class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                                Сохранить
-                            </button>
-                            <button type="button" onclick="closeAddModal()"
-                                    class="bg-gray-500 text-ozon-white px-4 py-2 rounded hover:bg-gray-700 transition">
-                                Отмена
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 </body>
 </html>
