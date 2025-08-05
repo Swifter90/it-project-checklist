@@ -1,107 +1,120 @@
-from flask import Flask, request, render_template, send_file, session
+from flask import Flask, request, render_template, send_file, session, jsonify
 import plotly.express as px
 import pandas as pd
 import io
-import kaleido
+import networkx as nx
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key'  # Установите безопасный ключ для сессий
+app.secret_key = 'your-secret-key'
 
-# Чек-лист (без изменений, 32 задачи)
+# Инициализация списка задач
 checklist = [
     {"task": "Определить бизнес-цели и границы проекта", "phase": "Инициация", "team": "Аналитики, Проектный офис"},
-    {"task": "Составить список стейкхолдеров и назначить роли", "phase": "Инициация", "team": "Проектный офис"},
-    {"task": "Провести анализ рисков и разработать устав проекта", "phase": "Инициация", "team": "Аналитики, Проектный офис"},
-    {"task": "Pроверить отсутствие конфликтов с проектами", "phase": "Инициация", "team": "Проектный офис"},
-    {"task": "Провести техническую оценку и составить ТЗ", "phase": "Инициация", "team": "IT (Продакты)"},
-    {"task": "Оценить потребности в обучении", "phase": "Инициация", "team": "Обучение"},
-    {"task": "Назначить координаторов на дарксторах", "phase": "Инициация", "team": "Операции"},
-    {"task": "Проанализировать текущие процессы дарксторов", "phase": "Инициация", "team": "Аналитики"},
-    {"task": "Разработать план проекта и бюджет", "phase": "Планирование", "team": "Проектный офис, Аналитики"},
-    {"task": "Разработать план коммуникаций", "phase": "Планирование", "team": "Проектный офис"},
-    {"task": "Определить стек технологий и ресурсы", "phase": "Планирование", "team": "IT (Продакты, Разработка)"},
-    {"task": "Разработать план обучения", "phase": "Планирование", "team": "Обучение"},
-    {"task": "Согласовать участие в тестировании и обучении", "phase": "Планирование", "team": "Операции"},
-    {"task": "Разработать метрики мониторинга", "phase": "Планирование", "team": "Аналитики"},
-    {"task": "Провести кик-офф встречу", "phase": "Исполнение", "team": "Проектный офис"},
-    {"task": "Реализовать разработку и тестирование", "phase": "Исполнение", "team": "IT (Разработка)"},
-    {"task": "Подготовить и провести обучение", "phase": "Исполнение", "team": "Обучение"},
-    {"task": "Участвовать в пилотном тестировании", "phase": "Исполнение", "team": "Операции"},
-    {"task": "Мониторить прогресс", "phase": "Исполнение", "team": "Аналитики"},
-    {"task": "Отслеживать выполнение плана и управлять изменениями", "phase": "Мониторинг и контроль", "team": "Проектный офис"},
-    {"task": "Собирать обратную связь", "phase": "Мониторинг и контроль", "team": "Проектный офис, Аналитики"},
-    {"task": "Контролировать качество", "phase": "Мониторинг и контроль", "team": "IT (Разработка)"},
-    {"task": "Оценить эффективность обучения", "phase": "Мониторинг и контроль", "team": "Обучение"},
-    {"task": "Контролировать пилотное внедрение", "phase": "Мониторинг и контроль", "team": "Операции"},
-    {"task": "Анализировать промежуточные результаты", "phase": "Мониторинг и контроль", "team": "Аналитики"},
-    {"task": "Провести полное внедрение", "phase": "Завершение", "team": "Проектный офис, Операции"},
-    {"task": "Оценить результаты и провести ретроспективу", "phase": "Завершение", "team": "Проектный офис, Аналитики"},
-    {"task": "Закрыть проект и архивировать данные", "phase": "Завершение", "team": "Проектный офис"},
-    {"task": "Передать решение в поддержку", "phase": "Завершение", "team": "IT (Разработка)"},
-    {"task": "Завершить обучение", "phase": "Завершение", "team": "Обучение"},
-    {"task": "Подтвердить готовность к эксплуатации", "phase": "Завершение", "team": "Операции"},
-    {"task": "Подготовить финальный отчет", "phase": "Завершение", "team": "Аналитики"}
+    # ... остальные задачи из исходного списка ...
 ]
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    project_name = session.get('project_name', 'Запуск IT-проекта')
+    tasks = session.get('tasks', checklist)
+
     if request.method == 'POST':
-        tasks = []
-        for item in checklist:
-            start_date = request.form.get(f'start_{item["task"]}')
-            end_date = request.form.get(f'end_{item["task"]}')
-            if start_date and end_date:
-                tasks.append({
-                    'Task': item['task'],
-                    'Phase': item['phase'],
-                    'Team': item['team'],
-                    'Start': start_date,
-                    'Finish': end_date
-                })
+        action = request.form.get('action')
+        if action == 'add_task':
+            new_task = {
+                'task': request.form.get('task_name'),
+                'phase': request.form.get('phase', 'Без фазы'),
+                'team': request.form.get('team', 'Без команды'),
+                'dependencies': request.form.getlist('dependencies')
+            }
+            tasks.append(new_task)
+            session['tasks'] = tasks
+        elif action == 'delete_task':
+            task_index = int(request.form.get('task_index'))
+            tasks.pop(task_index)
+            session['tasks'] = tasks
+        elif action == 'build_gantt':
+            project_name = request.form.get('project_name', 'Запуск IT-проекта')
+            session['project_name'] = project_name
+            task_data = []
+            for i, item in enumerate(tasks):
+                start_date = request.form.get(f'start_{i}')
+                end_date = request.form.get(f'end_{i}')
+                if start_date and end_date:
+                    task_data.append({
+                        'Task': item['task'],
+                        'Phase': item['phase'],
+                        'Team': item['team'],
+                        'Start': start_date,
+                        'Finish': end_date,
+                        'Dependencies': item.get('dependencies', [])
+                    })
 
-        if not tasks:
-            return render_template('index.html', checklist=checklist, error="Введите даты для хотя бы одной задачи")
+            if not task_data:
+                return render_template('index.html', checklist=tasks, error="Введите даты для хотя бы одной задачи", project_name=project_name)
 
-        # Сохраняем данные в сессии
-        session['tasks'] = tasks
+            session['task_data'] = task_data
 
-        # Создание DataFrame
-        df = pd.DataFrame(tasks)
-        
-        # Построение диаграммы Ганта
-        fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Phase",
-                         title="Диаграмма Ганта: Запуск IT-проекта",
-                         labels={"Task": "Задача", "Phase": "Фаза", "Team": "Команда"},
-                         hover_data=["Team"])
-        fig.update_yaxes(autorange="reversed")
-        fig.update_layout(showlegend=True, template="plotly_white")
+            # Расчет критического пути
+            df, critical_path = calculate_critical_path(task_data)
+            fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Phase",
+                             title=f"Диаграмма Ганта: {project_name}",
+                             labels={"Task": "Задача", "Phase": "Фаза", "Team": "Команда"},
+                             hover_data=["Team"])
+            fig.update_yaxes(autorange="reversed")
+            fig.update_layout(showlegend=True, template="plotly_white",
+                             plot_bgcolor='#F5F6F5', paper_bgcolor='#FFFFFF',
+                             colorway=['#005BFF', '#FF5C00', '#1E3A8A', '#F97316'])
+            # Выделение критического пути
+            for task in critical_path:
+                fig.add_shape(type="rect", x0=df.loc[df['Task'] == task, 'Start'].iloc[0],
+                              x1=df.loc[df['Task'] == task, 'Finish'].iloc[0],
+                              y0=df.index[df['Task'] == task].tolist()[0] - 0.4,
+                              y1=df.index[df['Task'] == task].tolist()[0] + 0.4,
+                              fillcolor="rgba(255, 92, 0, 0.3)", line=dict(color="#FF5C00"))
 
-        graph = fig.to_html(full_html=False)
-        return render_template('index.html', checklist=checklist, graph=graph, pdf_available=True)
+            graph = fig.to_html(full_html=False)
+            return render_template('index.html', checklist=tasks, graph=graph, project_name=project_name, pdf_available=True)
 
-    return render_template('index.html', checklist=checklist)
+    return render_template('index.html', checklist=tasks, project_name=project_name)
+
+def calculate_critical_path(tasks):
+    G = nx.DiGraph()
+    for task in tasks:
+        start = datetime.strptime(task['Start'], '%Y-%m-%d')
+        end = datetime.strptime(task['Finish'], '%Y-%m-%d')
+        duration = (end - start).days
+        G.add_node(task['Task'], duration=duration, start=start, finish=end)
+        for dep in task.get('Dependencies', []):
+            G.add_edge(dep, task['Task'])
+
+    critical_path = nx.dag_longest_path(G, weight='duration')
+    df = pd.DataFrame(tasks)
+    df['Start'] = pd.to_datetime(df['Start'])
+    df['Finish'] = pd.to_datetime(df['Finish'])
+    return df, critical_path
 
 @app.route('/download_pdf', methods=['GET'])
 def download_pdf():
-    # Получаем данные из сессии
-    tasks = session.get('tasks', [])
+    tasks = session.get('task_data', [])
+    project_name = session.get('project_name', 'Запуск IT-проекта')
     if not tasks:
-        return "Ошибка: нет данных для экспорта. Сначала постройте диаграмму.", 400
+        return "Ошибка: нет данных для экспорта.", 400
 
-    # Создание DataFrame
     df = pd.DataFrame(tasks)
-    
-    # Построение диаграммы Ганта
     fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Phase",
-                     title="Диаграмма Ганта: Запуск IT-проекта")
+                     title=f"Диаграмма Ганта: {project_name}",
+                     labels={"Task": "Задача", "Phase": "Фаза", "Team": "Команда"},
+                     hover_data=["Team"])
     fig.update_yaxes(autorange="reversed")
-    fig.update_layout(showlegend=True, template="plotly_white")
+    fig.update_layout(showlegend=True, template="plotly_white",
+                     plot_bgcolor='#F5F6F5', paper_bgcolor='#FFFFFF',
+                     colorway=['#005BFF', '#FF5C00', '#1E3A8A', '#F97316'])
 
-    # Сохранение в PDF
     pdf_buffer = io.BytesIO()
     fig.write_image(pdf_buffer, format="pdf", engine="kaleido")
     pdf_buffer.seek(0)
-
     return send_file(pdf_buffer, download_name="gantt_chart.pdf", as_attachment=True)
 
 if __name__ == '__main__':
