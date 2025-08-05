@@ -1,8 +1,11 @@
-# Используем официальный образ Python
-FROM python:3.8-slim
+# Используем Python 3.10
+FROM python:3.10-slim
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
+
+# Обновляем pip до последней версии
+RUN pip install --upgrade pip
 
 # Копируем файлы проекта
 COPY requirements.txt .
