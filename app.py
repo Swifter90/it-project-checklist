@@ -1,13 +1,13 @@
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template, send_file, session
 import plotly.express as px
 import pandas as pd
-from datetime import datetime
 import io
-import kaleido  # Для экспорта в PDF
+import kaleido
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key'  # Установите безопасный ключ для сессий
 
-# Обновленный чек-лист
+# Чек-лист (без изменений, 32 задачи)
 checklist = [
     {"task": "Определить бизнес-цели и границы проекта", "phase": "Инициация", "team": "Аналитики, Проектный офис"},
     {"task": "Составить список стейкхолдеров и назначить роли", "phase": "Инициация", "team": "Проектный офис"},
@@ -62,6 +62,9 @@ def index():
         if not tasks:
             return render_template('index.html', checklist=checklist, error="Введите даты для хотя бы одной задачи")
 
+        # Сохраняем данные в сессии
+        session['tasks'] = tasks
+
         # Создание DataFrame
         df = pd.DataFrame(tasks)
         
@@ -73,40 +76,28 @@ def index():
         fig.update_yaxes(autorange="reversed")
         fig.update_layout(showlegend=True, template="plotly_white")
 
-        # Сохранение диаграммы в PDF
-        pdf_buffer = io.BytesIO()
-        fig.write_image(pdf_buffer, format="pdf", engine="kaleido")
-        pdf_buffer.seek(0)
-
         graph = fig.to_html(full_html=False)
         return render_template('index.html', checklist=checklist, graph=graph, pdf_available=True)
 
     return render_template('index.html', checklist=checklist)
 
-@app.route('/download_pdf')
+@app.route('/download_pdf', methods=['GET'])
 def download_pdf():
-    tasks = []
-    for item in checklist:
-        start_date = request.args.get(f'start_{item["task"]}')
-        end_date = request.args.get(f'end_{item["task"]}')
-        if start_date and end_date:
-            tasks.append({
-                'Task': item['task'],
-                'Phase': item['phase'],
-                'Team': item['team'],
-                'Start': start_date,
-                'Finish': end_date
-            })
-
+    # Получаем данные из сессии
+    tasks = session.get('tasks', [])
     if not tasks:
-        return "Ошибка: нет данных для экспорта", 400
+        return "Ошибка: нет данных для экспорта. Сначала постройте диаграмму.", 400
 
+    # Создание DataFrame
     df = pd.DataFrame(tasks)
+    
+    # Построение диаграммы Ганта
     fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Phase",
                      title="Диаграмма Ганта: Запуск IT-проекта")
     fig.update_yaxes(autorange="reversed")
     fig.update_layout(showlegend=True, template="plotly_white")
 
+    # Сохранение в PDF
     pdf_buffer = io.BytesIO()
     fig.write_image(pdf_buffer, format="pdf", engine="kaleido")
     pdf_buffer.seek(0)
