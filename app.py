@@ -40,26 +40,6 @@ def index():
             task_index = int(request.form.get('task_index'))
             tasks.pop(task_index)
             session['tasks'] = tasks
-        elif action == 'edit_task':
-            task_index = int(request.form.get('task_index'))
-            task_name = request.form.get('task_name', '').strip()
-            if not task_name:
-                return render_template('index.html', checklist=tasks, error="Название задачи не может быть пустым", project_name=project_name, graph=graph, pdf_available=bool(graph))
-            tasks[task_index] = {
-                'task': task_name,
-                'phase': request.form.get('phase', 'Без фазы'),
-                'team': request.form.get('team', 'Без команды'),
-                'dependencies': request.form.getlist('dependencies'),
-                'is_milestone': request.form.get('is_milestone') == 'on',
-                'start_date': request.form.get('start_date'),
-                'end_date': request.form.get('end_date') if not request.form.get('is_milestone') else request.form.get('start_date')
-            }
-            if tasks[task_index]['start_date'] and tasks[task_index]['end_date'] and not tasks[task_index]['is_milestone']:
-                start = datetime.strptime(tasks[task_index]['start_date'], '%Y-%m-%d')
-                end = datetime.strptime(tasks[task_index]['end_date'], '%Y-%m-%d')
-                if end < start:
-                    return render_template('index.html', checklist=tasks, error="Дата окончания не может быть раньше даты начала", project_name=project_name, graph=graph, pdf_available=bool(graph))
-            session['tasks'] = tasks
         elif action == 'update_project_name':
             project_name = request.form.get('project_name', 'Запуск IT-проекта').strip()
             if not project_name:
@@ -110,7 +90,7 @@ def index():
                                   path=f"M {fig.layout.xaxis.tickvals[0]} {i-0.4} L {fig.layout.xaxis.tickvals[0]} {i+0.4} L {fig.layout.xaxis.tickvals[0]+5} {i} Z",
                                   fillcolor="#FF5C00", line=dict(color="#FF5C00"))
 
-            graph = fig.to_html(full_html=False)
+            graph = fig.to_html(full_html=False, include_plotlyjs='cdn')
             session['graph'] = graph
             return render_template('index.html', checklist=tasks, graph=graph, project_name=project_name, pdf_available=True)
 
