@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, send_file, session, jsonify
+from flask import Flask, request, render_template, send_file, session
 import plotly.express as px
 import pandas as pd
 import io
@@ -17,39 +17,70 @@ def index():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_task':
+            task_name = request.form.get('task_name', '').strip()
+            if not task_name:
+                return render_template('index.html', checklist=tasks, error="Название задачи не может быть пустым", project_name=project_name, graph=graph, pdf_available=bool(graph))
             new_task = {
-                'task': request.form.get('task_name'),
+                'task': task_name,
                 'phase': request.form.get('phase', 'Без фазы'),
                 'team': request.form.get('team', 'Без команды'),
                 'dependencies': request.form.getlist('dependencies'),
-                'is_milestone': request.form.get('is_milestone') == 'on'  # Флаг вехи
+                'is_milestone': request.form.get('is_milestone') == 'on',
+                'start_date': request.form.get('start_date'),
+                'end_date': request.form.get('end_date') if not request.form.get('is_milestone') else request.form.get('start_date')
             }
+            if new_task['start_date'] and new_task['end_date'] and not new_task['is_milestone']:
+                start = datetime.strptime(new_task['start_date'], '%Y-%m-%d')
+                end = datetime.strptime(new_task['end_date'], '%Y-%m-%d')
+                if end < start:
+                    return render_template('index.html', checklist=tasks, error="Дата окончания не может быть раньше даты начала", project_name=project_name, graph=graph, pdf_available=bool(graph))
             tasks.append(new_task)
             session['tasks'] = tasks
         elif action == 'delete_task':
             task_index = int(request.form.get('task_index'))
             tasks.pop(task_index)
             session['tasks'] = tasks
-        elif action == 'build_gantt':
-            project_name = request.form.get('project_name', 'Запуск IT-проекта')
+        elif action == 'edit_task':
+            task_index = int(request.form.get('task_index'))
+            task_name = request.form.get('task_name', '').strip()
+            if not task_name:
+                return render_template('index.html', checklist=tasks, error="Название задачи не может быть пустым", project_name=project_name, graph=graph, pdf_available=bool(graph))
+            tasks[task_index] = {
+                'task': task_name,
+                'phase': request.form.get('phase', 'Без фазы'),
+                'team': request.form.get('team', 'Без команды'),
+                'dependencies': request.form.getlist('dependencies'),
+                'is_milestone': request.form.get('is_milestone') == 'on',
+                'start_date': request.form.get('start_date'),
+                'end_date': request.form.get('end_date') if not request.form.get('is_milestone') else request.form.get('start_date')
+            }
+            if tasks[task_index]['start_date'] and tasks[task_index]['end_date'] and not tasks[task_index]['is_milestone']:
+                start = datetime.strptime(tasks[task_index]['start_date'], '%Y-%m-%d')
+                end = datetime.strptime(tasks[task_index]['end_date'], '%Y-%m-%d')
+                if end < start:
+                    return render_template('index.html', checklist=tasks, error="Дата окончания не может быть раньше даты начала", project_name=project_name, graph=graph, pdf_available=bool(graph))
+            session['tasks'] = tasks
+        elif action == 'update_project_name':
+            project_name = request.form.get('project_name', 'Запуск IT-проекта').strip()
+            if not project_name:
+                project_name = 'Запуск IT-проекта'
             session['project_name'] = project_name
+        elif action == 'build_gantt':
             task_data = []
-            for i, item in enumerate(tasks):
-                start_date = request.form.get(f'start_{i}')
-                end_date = request.form.get(f'end_{i}' if not item.get('is_milestone') else f'start_{i}')
-                if start_date and (end_date or item.get('is_milestone')):
+            for item in tasks:
+                if item['start_date'] and (item['end_date'] or item['is_milestone']):
                     task_data.append({
                         'Task': item['task'],
                         'Phase': item['phase'],
                         'Team': item['team'],
-                        'Start': start_date,
-                        'Finish': start_date if item.get('is_milestone') else end_date,
+                        'Start': item['start_date'],
+                        'Finish': item['start_date'] if item['is_milestone'] else item['end_date'],
                         'Dependencies': item.get('dependencies', []),
                         'IsMilestone': item.get('is_milestone', False)
                     })
 
             if not task_data:
-                return render_template('index.html', checklist=tasks, error="Введите даты для хотя бы одной задачи", project_name=project_name, graph=None)
+                return render_template('index.html', checklist=tasks, error="Введите даты для хотя бы одной задачи", project_name=project_name, graph=graph, pdf_available=bool(graph))
 
             session['task_data'] = task_data
 
