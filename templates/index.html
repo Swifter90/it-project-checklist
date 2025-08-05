@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Диаграмма Ганта: Запуск IT-проекта</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function filterTasks() {
+            const phaseFilter = document.getElementById('phaseFilter').value;
+            const teamFilter = document.getElementById('teamFilter').value;
+            document.querySelectorAll('.task-row').forEach(row => {
+                const phase = row.getAttribute('data-phase');
+                const team = row.getAttribute('data-team');
+                if ((phaseFilter === '' || phase === phaseFilter) && (teamFilter === '' || team === teamFilter)) {
+                    row.style.display = 'block';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+    </script>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-6">
@@ -17,20 +32,49 @@
         {% endif %}
 
         <form method="POST" class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-semibold">Фильтр по фазе:</label>
+                    <select id="phaseFilter" onchange="filterTasks()" class="mt-1 p-2 border rounded w-full sm:w-48">
+                        <option value="">Все фазы</option>
+                        {% for phase in phases %}
+                        <option value="{{ phase }}">{{ phase }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold">Фильтр по команде:</label>
+                    <select id="teamFilter" onchange="filterTasks()" class="mt-1 p-2 border rounded w-full sm:w-48">
+                        <option value="">Все команды</option>
+                        {% for team in teams %}
+                        <option value="{{ team }}">{{ team }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
             <div class="grid grid-cols-1 gap-4">
                 {% for item in checklist %}
-                <div class="border-b pb-4">
+                <div class="task-row border-b pb-4" data-phase="{{ item.phase }}" data-team="{{ item.team }}">
                     <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }})</p>
                     <div class="mt-2 flex flex-col sm:flex-row sm:gap-4">
                         <div>
                             <label class="block text-sm">Дата начала:</label>
                             <input type="date" name="start_{{ item.task }}"
+                                   value="{{ form_data[item.task].start }}"
                                    class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
                             <label class="block text-sm">Дата окончания:</label>
                             <input type="date" name="end_{{ item.task }}"
+                                   value="{{ form_data[item.task].end }}"
                                    class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm">Прогресс (%):</label>
+                            <input type="number" name="progress_{{ item.task }}"
+                                   value="{{ form_data[item.task].progress }}"
+                                   min="0" max="100"
+                                   class="mt-1 p-2 border rounded w-full sm:w-24 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
                 </div>
