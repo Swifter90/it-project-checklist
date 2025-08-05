@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 venv/
 *.pdf
+.DS_Store
+gantt_data.db
