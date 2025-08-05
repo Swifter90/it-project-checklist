@@ -20,22 +20,22 @@
         }
     </script>
     <script>
-        function toggleEndDate(checkbox, index) {
-            const endDateInput = document.getElementById(`end_${index}`);
+        function toggleEndDate(checkbox, prefix) {
+            const endDateInput = document.getElementById(`${prefix}_end_date`);
             endDateInput.disabled = checkbox.checked;
             if (checkbox.checked) {
-                endDateInput.value = document.getElementById(`start_${index}`).value;
+                endDateInput.value = document.getElementById(`${prefix}_start_date`).value;
             }
         }
 
-        function validateDates(index) {
-            const startDate = document.getElementById(`start_${index}`).value;
-            const endDate = document.getElementById(`end_${index}`).value;
-            const isMilestone = document.getElementById(`is_milestone_${index}`).checked;
+        function validateDates(prefix) {
+            const startDate = document.getElementById(`${prefix}_start_date`).value;
+            const endDate = document.getElementById(`${prefix}_end_date`).value;
+            const isMilestone = document.getElementById(`${prefix}_is_milestone`).checked;
             if (startDate && endDate && !isMilestone) {
                 if (new Date(endDate) < new Date(startDate)) {
                     alert("Дата окончания не может быть раньше даты начала!");
-                    document.getElementById(`end_${index}`).value = '';
+                    document.getElementById(`${prefix}_end_date`).value = '';
                     return false;
                 }
             }
@@ -46,20 +46,19 @@
             return confirm(`Вы уверены, что хотите удалить задачу "${taskName}"?`);
         }
 
-        function openEditModal(index, taskName, phase, team, startDate, endDate, isMilestone) {
-            document.getElementById('edit_task_index').value = index;
-            document.getElementById('edit_task_name').value = taskName;
-            document.getElementById('edit_phase').value = phase;
-            document.getElementById('edit_team').value = team;
-            document.getElementById('edit_start_date').value = startDate || '';
-            document.getElementById('edit_end_date').value = endDate || '';
-            document.getElementById('edit_is_milestone').checked = isMilestone;
-            document.getElementById('edit_end_date').disabled = isMilestone;
-            document.getElementById('editModal').classList.remove('hidden');
+        function openAddModal() {
+            document.getElementById('add_task_name').value = '';
+            document.getElementById('add_phase').value = '';
+            document.getElementById('add_team').value = '';
+            document.getElementById('add_start_date').value = '';
+            document.getElementById('add_end_date').value = '';
+            document.getElementById('add_is_milestone').checked = false;
+            document.getElementById('add_end_date').disabled = false;
+            document.getElementById('addModal').classList.remove('hidden');
         }
 
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
         }
     </script>
 </head>
@@ -83,38 +82,12 @@
         </div>
         {% endif %}
 
-        <form method="POST" class="bg-ozon-white shadow-md rounded-lg p-6 mb-6">
-            <div class="mb-4">
-                <h2 class="text-lg font-semibold text-ozon-blue">Добавить задачу</h2>
-                <div class="flex flex-col gap-4">
-                    <input type="text" name="task_name" placeholder="Название задачи"
-                           class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                    <input type="text" name="phase" placeholder="Фаза (опционально)"
-                           class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                    <input type="text" name="team" placeholder="Команда (опционально)"
-                           class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                    <select name="dependencies" multiple
-                            class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        {% for item in checklist %}
-                        <option value="{{ item.task }}">{{ item.task }}</option>
-                        {% endfor %}
-                    </select>
-                    <label class="flex items-center">
-                        <input type="checkbox" name="is_milestone" id="is_milestone_new" onchange="toggleEndDate(this, 'new')"
-                               class="mr-2">
-                        <span class="text-sm text-ozon-blue">Веха (без длительности)</span>
-                    </label>
-                    <input type="date" name="start_date" id="start_new"
-                           class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                    <input type="date" name="end_date" id="end_new"
-                           class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                    <button type="submit" name="action" value="add_task"
-                            class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                        Добавить задачу
-                    </button>
-                </div>
-            </div>
-        </form>
+        <div class="bg-ozon-white shadow-md rounded-lg p-6 mb-6">
+            <button type="button" onclick="openAddModal()"
+                    class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                Создать задачу
+            </button>
+        </div>
 
         {% if checklist %}
         <div class="bg-ozon-white shadow-md rounded-lg p-6 mb-6">
@@ -124,10 +97,6 @@
                 <div class="flex justify-between items-center border-b pb-4">
                     <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }}) {% if item.is_milestone %}[Веха]{% endif %}</p>
                     <div class="flex gap-2">
-                        <button type="button" onclick="openEditModal('{{ loop.index0 }}', '{{ item.task | escape }}', '{{ item.phase | escape }}', '{{ item.team | escape }}', '{{ item.start_date | default('') }}', '{{ item.end_date | default('') }}', {{ item.is_milestone | lower }})"
-                                class="bg-ozon-blue text-ozon-white px-3 py-1 rounded hover:bg-blue-700 transition">
-                            Редактировать
-                        </button>
                         <form method="POST" onsubmit="return confirmDelete('{{ item.task | escape }}')">
                             <input type="hidden" name="task_index" value="{{ loop.index0 }}">
                             <button type="submit" name="action" value="delete_task"
@@ -161,18 +130,17 @@
         </div>
         {% endif %}
 
-        <!-- Модальное окно для редактирования -->
-        <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <!-- Модальное окно для добавления задачи -->
+        <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
             <div class="bg-ozon-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h2 class="text-lg font-semibold text-ozon-blue mb-4">Редактировать задачу</h2>
-                <form method="POST" onsubmit="return validateDates('edit')">
-                    <input type="hidden" name="task_index" id="edit_task_index">
+                <h2 class="text-lg font-semibold text-ozon-blue mb-4">Создать задачу</h2>
+                <form method="POST" onsubmit="return validateDates('add')">
                     <div class="flex flex-col gap-4">
-                        <input type="text" name="task_name" id="edit_task_name" placeholder="Название задачи"
+                        <input type="text" name="task_name" id="add_task_name" placeholder="Название задачи"
                                class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <input type="text" name="phase" id="edit_phase" placeholder="Фаза (опционально)"
+                        <input type="text" name="phase" id="add_phase" placeholder="Фаза (опционально)"
                                class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <input type="text" name="team" id="edit_team" placeholder="Команда (опционально)"
+                        <input type="text" name="team" id="add_team" placeholder="Команда (опционально)"
                                class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
                         <select name="dependencies" multiple
                                 class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
@@ -181,20 +149,20 @@
                             {% endfor %}
                         </select>
                         <label class="flex items-center">
-                            <input type="checkbox" name="is_milestone" id="edit_is_milestone" onchange="toggleEndDate(this, 'edit')"
+                            <input type="checkbox" name="is_milestone" id="add_is_milestone" onchange="toggleEndDate(this, 'add')"
                                    class="mr-2">
                             <span class="text-sm text-ozon-blue">Веха (без длительности)</span>
                         </label>
-                        <input type="date" name="start_date" id="edit_start_date"
+                        <input type="date" name="start_date" id="add_start_date"
                                class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        <input type="date" name="end_date" id="edit_end_date"
+                        <input type="date" name="end_date" id="add_end_date"
                                class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
                         <div class="flex gap-4">
-                            <button type="submit" name="action" value="edit_task"
+                            <button type="submit" name="action" value="add_task"
                                     class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
                                 Сохранить
                             </button>
-                            <button type="button" onclick="closeEditModal()"
+                            <button type="button" onclick="closeAddModal()"
                                     class="bg-gray-500 text-ozon-white px-4 py-2 rounded hover:bg-gray-700 transition">
                                 Отмена
                             </button>
