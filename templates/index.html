@@ -42,7 +42,7 @@
                     Построить диаграмму
                 </button>
                 {% if pdf_available %}
-                <a href="/download_pdf?{% for item in checklist %}start_{{ item.task }}={{ request.form.get('start_' + item.task) }}&end_{{ item.task }}={{ request.form.get('end_' + item.task) }}&{% endfor %}"
+                <a href="/download_pdf"
                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
                     Скачать PDF
                 </a>
