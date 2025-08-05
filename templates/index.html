@@ -57,47 +57,26 @@
                     </button>
                 </div>
             </div>
-            <div class="grid grid-cols-1 gap-4">
-                {% for i, item in checklist|enumerate %}
-                <div class="border-b pb-4">
-                    <div class="flex justify-between items-center">
-                        <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }})</p>
-                        <button type="submit" name="action" value="delete_task" name="task_index" value="{{ i }}"
-                                class="text-red-600 hover:text-red-800">Удалить</button>
-                    </div>
-                    <div class="mt-2 flex flex-col sm:flex-row sm:gap-4">
-                        <div>
-                            <label class="block text-sm">Дата начала:</label>
-                            <input type="date" name="start_{{ i }}"
-                                   class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        </div>
-                        <div>
-                            <label class="block text-sm">Дата окончания:</label>
-                            <input type="date" name="end_{{ i }}"
-                                   class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            <div class="mt-6 flex gap-4">
-                <button type="submit" name="action" value="build_gantt"
-                        class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                    Построить диаграмму
-                </button>
-                {% if pdf_available %}
-                <a href="/download_pdf" class="bg-ozon-orange text-ozon-white px-4 py-2 rounded hover:bg-orange-700 transition">
-                    Скачать PDF
-                </a>
-                {% endif %}
-            </div>
-        </form>
-
-        {% if graph %}
-        <div class="bg-ozon-white shadow-md rounded-lg p-6">
-            {{ graph | safe }}
+           <div class="grid grid-cols-1 gap-4">
+    {% for item in checklist %}
+    <div class="border-b pb-4">
+        <div class="flex justify-between items-center">
+            <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }})</p>
+            <button type="submit" name="action" value="delete_task" name="task_index" value="{{ loop.index0 }}"
+                    class="text-red-600 hover:text-red-800">Удалить</button>
         </div>
-        {% endif %}
+        <div class="mt-2 flex flex-col sm:flex-row sm:gap-4">
+            <div>
+                <label class="block text-sm">Дата начала:</label>
+                <input type="date" name="start_{{ loop.index0 }}"
+                       class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+            </div>
+            <div>
+                <label class="block text-sm">Дата окончания:</label>
+                <input type="date" name="end_{{ loop.index0 }}"
+                       class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+            </div>
+        </div>
     </div>
-</body>
-</html>
+    {% endfor %}
+</div>
