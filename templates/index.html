@@ -27,28 +27,67 @@
                 endDateInput.value = document.getElementById(`start_${index}`).value;
             }
         }
+
+        function validateDates(index) {
+            const startDate = document.getElementById(`start_${index}`).value;
+            const endDate = document.getElementById(`end_${index}`).value;
+            const isMilestone = document.getElementById(`is_milestone_${index}`).checked;
+            if (startDate && endDate && !isMilestone) {
+                if (new Date(endDate) < new Date(startDate)) {
+                    alert("Дата окончания не может быть раньше даты начала!");
+                    document.getElementById(`end_${index}`).value = '';
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function confirmDelete(taskName) {
+            return confirm(`Вы уверены, что хотите удалить задачу "${taskName}"?`);
+        }
+
+        function openEditModal(index, taskName, phase, team, startDate, endDate, isMilestone) {
+            document.getElementById('edit_task_index').value = index;
+            document.getElementById('edit_task_name').value = taskName;
+            document.getElementById('edit_phase').value = phase;
+            document.getElementById('edit_team').value = team;
+            document.getElementById('edit_start_date').value = startDate || '';
+            document.getElementById('edit_end_date').value = endDate || '';
+            document.getElementById('edit_is_milestone').checked = isMilestone;
+            document.getElementById('edit_end_date').disabled = isMilestone;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
     </script>
 </head>
 <body class="bg-ozon-gray font-sans">
     <div class="container mx-auto p-6">
-        <h1 class="text-3xl font-bold text-center mb-6 text-ozon-blue">Диаграмма Ганта: {{ project_name }}</h1>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-ozon-blue">Диаграмма Ганта: {{ project_name }}</h1>
+            <form method="POST" class="flex gap-2">
+                <input type="text" name="project_name" value="{{ project_name }}"
+                       class="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                <button type="submit" name="action" value="update_project_name"
+                        class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                    Изменить
+                </button>
+            </form>
+        </div>
 
         {% if error %}
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 animate-pulse">
             {{ error }}
         </div>
         {% endif %}
 
         <form method="POST" class="bg-ozon-white shadow-md rounded-lg p-6 mb-6">
             <div class="mb-4">
-                <label class="block text-sm font-semibold text-ozon-blue">Название проекта:</label>
-                <input type="text" name="project_name" value="{{ project_name }}"
-                       class="mt-1 p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-            </div>
-            <div class="mb-4">
                 <h2 class="text-lg font-semibold text-ozon-blue">Добавить задачу</h2>
                 <div class="flex flex-col gap-4">
-                    <input type="text" name="task_name" placeholder="Название задачи" required
+                    <input type="text" name="task_name" placeholder="Название задачи"
                            class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
                     <input type="text" name="phase" placeholder="Фаза (опционально)"
                            class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
@@ -61,62 +100,59 @@
                         {% endfor %}
                     </select>
                     <label class="flex items-center">
-                        <input type="checkbox" name="is_milestone" onchange="toggleEndDate(this, 'new')"
+                        <input type="checkbox" name="is_milestone" id="is_milestone_new" onchange="toggleEndDate(this, 'new')"
                                class="mr-2">
                         <span class="text-sm text-ozon-blue">Веха (без длительности)</span>
                     </label>
+                    <input type="date" name="start_date" id="start_new"
+                           class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                    <input type="date" name="end_date" id="end_new"
+                           class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
                     <button type="submit" name="action" value="add_task"
                             class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
                         Добавить задачу
                     </button>
                 </div>
             </div>
-            {% if checklist %}
+        </form>
+
+        {% if checklist %}
+        <div class="bg-ozon-white shadow-md rounded-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold text-ozon-blue mb-4">Список задач</h2>
             <div class="grid grid-cols-1 gap-4">
                 {% for item in checklist %}
-                <div class="border-b pb-4">
-                    <div class="flex justify-between items-center">
-                        <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }}) {% if item.is_milestone %}[Веха]{% endif %}</p>
-                        <button type="submit" name="action" value="delete_task" name="task_index" value="{{ loop.index0 }}"
-                                class="text-red-600 hover:text-red-800">Удалить</button>
-                    </div>
-                    <div class="mt-2 flex flex-col sm:flex-row sm:gap-4">
-                        <div>
-                            <label class="block text-sm">Дата начала:</label>
-                            <input type="date" name="start_{{ loop.index0 }}" id="start_{{ loop.index0 }}"
-                                   class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-ozon-blue">
-                        </div>
-                        <div>
-                            <label class="block text-sm">Дата окончания:</label>
-                            <input type="date" name="end_{{ loop.index0 }}" id="end_{{ loop.index0 }}"
-                                   class="mt-1 p-2 border rounded w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-ozon-blue"
-                                   {% if item.is_milestone %} disabled {% endif %}>
-                        </div>
-                        <label class="flex items-center mt-2">
-                            <input type="checkbox" name="is_milestone_{{ loop.index0 }}"
-                                   onchange="toggleEndDate(this, '{{ loop.index0 }}')"
-                                   {% if item.is_milestone %} checked {% endif %}
-                                   class="mr-2">
-                            <span class="text-sm text-ozon-blue">Веха</span>
-                        </label>
+                <div class="flex justify-between items-center border-b pb-4">
+                    <p class="font-semibold">{{ item.task }} ({{ item.phase }}, {{ item.team }}) {% if item.is_milestone %}[Веха]{% endif %}</p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="openEditModal('{{ loop.index0 }}', '{{ item.task | escape }}', '{{ item.phase | escape }}', '{{ item.team | escape }}', '{{ item.start_date | default('') }}', '{{ item.end_date | default('') }}', {{ item.is_milestone | lower }})"
+                                class="bg-ozon-blue text-ozon-white px-3 py-1 rounded hover:bg-blue-700 transition">
+                            Редактировать
+                        </button>
+                        <form method="POST" onsubmit="return confirmDelete('{{ item.task | escape }}')">
+                            <input type="hidden" name="task_index" value="{{ loop.index0 }}">
+                            <button type="submit" name="action" value="delete_task"
+                                    class="bg-red-600 text-ozon-white px-3 py-1 rounded hover:bg-red-800 transition">
+                                Удалить
+                            </button>
+                        </form>
                     </div>
                 </div>
                 {% endfor %}
             </div>
+        </div>
+        {% endif %}
+
+        <form method="POST" class="flex gap-4 mb-6">
+            <button type="submit" name="action" value="build_gantt"
+                    class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition {% if not checklist %} opacity-50 cursor-not-allowed {% endif %}"
+                    {% if not checklist %} disabled {% endif %}>
+                Построить диаграмму
+            </button>
+            {% if pdf_available %}
+            <a href="/download_pdf" class="bg-ozon-orange text-ozon-white px-4 py-2 rounded hover:bg-orange-700 transition">
+                Скачать PDF
+            </a>
             {% endif %}
-            <div class="mt-6 flex gap-4">
-                <button type="submit" name="action" value="build_gantt"
-                        class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition
-                        {% if not checklist %} opacity-50 cursor-not-allowed {% endif %}"
-                        {% if not checklist %} disabled {% endif %}>
-                    Построить диаграмму
-                </button>
-                {% if pdf_available %}
-                <a href="/download_pdf" class="bg-ozon-orange text-ozon-white px-4 py-2 rounded hover:bg-orange-700 transition">
-                    Скачать PDF
-                </a>
-                {% endif %}
-            </div>
         </form>
 
         {% if graph %}
@@ -124,6 +160,49 @@
             {{ graph | safe }}
         </div>
         {% endif %}
+
+        <!-- Модальное окно для редактирования -->
+        <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-ozon-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h2 class="text-lg font-semibold text-ozon-blue mb-4">Редактировать задачу</h2>
+                <form method="POST" onsubmit="return validateDates('edit')">
+                    <input type="hidden" name="task_index" id="edit_task_index">
+                    <div class="flex flex-col gap-4">
+                        <input type="text" name="task_name" id="edit_task_name" placeholder="Название задачи"
+                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                        <input type="text" name="phase" id="edit_phase" placeholder="Фаза (опционально)"
+                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                        <input type="text" name="team" id="edit_team" placeholder="Команда (опционально)"
+                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                        <select name="dependencies" multiple
+                                class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                            {% for item in checklist %}
+                            <option value="{{ item.task }}">{{ item.task }}</option>
+                            {% endfor %}
+                        </select>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="is_milestone" id="edit_is_milestone" onchange="toggleEndDate(this, 'edit')"
+                                   class="mr-2">
+                            <span class="text-sm text-ozon-blue">Веха (без длительности)</span>
+                        </label>
+                        <input type="date" name="start_date" id="edit_start_date"
+                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                        <input type="date" name="end_date" id="edit_end_date"
+                               class="p-2 border rounded w-full focus:outline-none focus:ring-2 focus:ring-ozon-blue">
+                        <div class="flex gap-4">
+                            <button type="submit" name="action" value="edit_task"
+                                    class="bg-ozon-blue text-ozon-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                                Сохранить
+                            </button>
+                            <button type="button" onclick="closeEditModal()"
+                                    class="bg-gray-500 text-ozon-white px-4 py-2 rounded hover:bg-gray-700 transition">
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </body>
 </html>
